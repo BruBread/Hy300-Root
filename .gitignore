@@ -31,3 +31,4 @@ backups/init_rc_patched.rc
 /init_rc_revert/
 /uboot_anti_tamper_research/
 /tools/
+issue1_share/
