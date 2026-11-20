@@ -129,7 +129,7 @@ analysis/              the evidence: hypothesis results (JSON), kernel logs, Ghi
 | Script | What it does |
 |--------|--------------|
 | [`scripts/race.sh`](scripts/race.sh) | The one that got me in. Races `adb_enabled=1` into the ~1 s early-boot window over USB and Wi-Fi until it sticks. |
-| [`scripts/check_malware.sh`](scripts/check_malware.sh) | Read-only check for the preinstalled proxy malware: apps, hidden files, port-9000 connections, `daemon12138`. See [MALWARE_FINDINGS.md](MALWARE_FINDINGS.md). |
+| [`scripts/check_malware.sh`](scripts/check_malware.sh) | Read-only check for the preinstalled proxy malware: apps (including the `hotack` SDK from HY300 Pro units), hidden files, connections on the proxy ports, `daemon12138`. See [MALWARE_FINDINGS.md](MALWARE_FINDINGS.md). |
 | [`scripts/sleep_mode.bat`](scripts/sleep_mode.bat) | Turns the light (and fan) off and on without shutting down. Toggles, or takes `sleep` / `wake`. |
 | [`scripts/find_cmdtbl.py`](scripts/find_cmdtbl.py) | Finds U-Boot's command table in a raw image and works out this build's `cmd_tbl_s` layout. |
 | [`scripts/walk_cmdtbl.py`](scripts/walk_cmdtbl.py) | Walks the table from one known entry to get the whole command list. No Ghidra needed. |
