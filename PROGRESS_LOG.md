@@ -198,6 +198,14 @@ Compared `do_boot_android`/`do_bootrkp` between the two firmware builds (Jun 202
 
 **Where this leaves things:** `uboot.bin` is now exhausted as a suspect across two independent firmware revisions, and `trust.bin` was already confirmed byte-identical between builds with no relevant references. The mechanism is not in either file. Remaining candidates: (a) the **pre-GPT reserved region** (idbloader/TPL+SPL, the BootROM-loaded first stage that runs *before* U-Boot proper and before the GPT/partition table is even read) — already dumped (`init_rc_revert/emmc_dumps/pre_gpt_pre_reboot.bin`/`pre_gpt_post_reboot.bin`) and string-searched (clean, no plaintext content), but **never disassembled as code** — this is the most promising unexamined region given it runs earlier than everything already ruled out; (b) `trust.bin`'s actual runtime TEE behavior (only string-scanned so far, not behaviorally traced); (c) reopening Android-side possibilities, though this is weaker given the recovery-vs-normal-boot test already ruled out everything Android-side once.
 
+## Attempt 20: preinstalled residential-proxy malware found and removed (2026-11-21)
+
+While planning a wall-display feature I looked in Magisk's boot folders and found two `99-network-dispatch` hooks I never wrote. Mapping every live TCP connection to its process (`/proc/net/tcp*` inode to `/proc/<pid>/fd`) showed most remote connections, many on port 9000, belonged to `com.rockchip.itvbox`: a `/data/app` app running as uid 1000, installed by the OEM settings app `com.shzhtxcz.txbox`, with permissions like `INSTALL_PACKAGES`, `MASTER_CLEAR` and `CONTROL_VPN`. It had re-enabled itself through a self-update after my 2026-10-11 debloat disabled it. Also found: `/data/adb/prebuilt` (root toolkit with an MQTT lock and a hidden Alpine Linux 3.20 filesystem) and a packed ARM64 binary in `/data/local/tmp`, with four files locked by `chattr +i`.
+
+Magisk's log showed `Magisk environment incomplete, abort`, so the planted hooks had never actually run. After I deleted `prebuilt`, the next boot recreated it (empty) during the ~9 s the OEM root daemon `daemon12138` ran, which makes that daemon the prime suspect for the dropper.
+
+Removed the three apps the settings app had installed, the toolkit, the hooks and the packed binary. Blocked `daemon12138` with an early-boot bind mount in `/vendor/etc/init/hw/init.rk3326.rc` (it now exits with status 127; `/system` itself stays untouched). Turned on adb authorization. Verified after a full power cycle: nothing came back, zero port-9000 connections. Full write-up: [MALWARE_FINDINGS.md](MALWARE_FINDINGS.md). Checker: [`scripts/check_malware.sh`](scripts/check_malware.sh).
+
 ## Open threads / ideas not yet exhausted
 
 - Build a tiny sideloaded app to directly fire an intent at `RKDeviceTest`'s exported `AgingTestActivity` (`rk.intent.action.startDevicetest`) — tests app-liveness directly, bypassing the file-detection mechanism that failed twice.

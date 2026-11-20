@@ -8,6 +8,8 @@ The device is a Magcubic/HY300-branded projector that is actually a **Rockchip R
 
 > ⚠️ Everything here was done on a projector I own, for interoperability and to learn. See [Legal & scope](#legal--scope) before you touch your own device. Nothing here is a remote exploit; it all starts from physical possession and the stock recovery.
 
+> 🚨 **Security notice: this projector shipped with what looks like residential-proxy malware.** A system-signed app installed by the OEM settings app relayed traffic through the device, alongside a hidden root toolkit. Full evidence, indicators and removal steps: [MALWARE_FINDINGS.md](MALWARE_FINDINGS.md). Own an HY300 / TXCZ RK3326 unit? Run [`scripts/check_malware.sh`](scripts/check_malware.sh). It is read-only.
+
 ## At a glance
 
 | | |
@@ -64,7 +66,7 @@ The breakthrough was realizing there are two different locks, and they fail diff
 
 3. So I automated the race ([`scripts/race.sh`](scripts/race.sh)): the instant ADB appears, hammer `settings put global adb_enabled 1` over both USB and Wi-Fi until it sticks. It landed on **iteration 3 (~1 s)**. Once `adb_enabled=1` is written into the CE-encrypted settings DB *by the running system*, `UsbDeviceManager` now reads `1` and **keeps** ADB instead of resetting it.
 
-4. `ro.adb.secure` is unset, so there's no RSA authorization prompt — ADB is trusted immediately, and `adb root` escalates (userdebug).
+4. `ro.adb.secure` is unset, so there's no RSA authorization prompt — ADB is trusted immediately, and `adb root` escalates (userdebug). That also means anything on the same network gets root, so after finding the malware I turned authorization on with my PC's key (see [MALWARE_FINDINGS.md](MALWARE_FINDINGS.md#closing-my-own-hole)). Do the same once you're in.
 
 The key insight: the property override alone only buys the one-second window; the thing that makes it *permanent* is flipping the real `adb_enabled` setting during that window, through the booted settings provider that recovery can't reach.
 
@@ -101,6 +103,7 @@ This is specific to a **userdebug** build with `ro.adb.secure` unset. A `user` b
 ```
 README.md              this file
 PROGRESS_LOG.md        the full blow-by-blow: 19+ attempts, each with its reasoning
+MALWARE_FINDINGS.md    the preinstalled proxy malware I found, with indicators and removal steps
 SAFETY_PLAYBOOK.md     backup-first rules and brick-recovery notes I worked under
 scripts/               everything I actually wrote (see table below)
 scripts/ghidra/        headless Ghidra call-graph tracers for the U-Boot analysis
@@ -114,6 +117,7 @@ analysis/              the evidence trail: hypothesis results (JSON), kernel log
 | Script | What it does |
 |--------|--------------|
 | [`scripts/race.sh`](scripts/race.sh) | The win. Races `adb_enabled=1` into the ~1 s early-boot window over USB + Wi-Fi until it sticks. |
+| [`scripts/check_malware.sh`](scripts/check_malware.sh) | Read-only check for the preinstalled proxy malware (apps, hidden files, port-9000 connections, `daemon12138`). See [MALWARE_FINDINGS.md](MALWARE_FINDINGS.md). |
 | [`scripts/find_cmdtbl.py`](scripts/find_cmdtbl.py) | Locates U-Boot's command table in a raw image and derives this build's `cmd_tbl_s` struct layout. |
 | [`scripts/walk_cmdtbl.py`](scripts/walk_cmdtbl.py) | Walks the table from a known anchor to recover the whole command list — no Ghidra needed. |
 | [`scripts/fullscan.py`](scripts/fullscan.py) | Threaded 1–65535 TCP port sweep of the device over the LAN. |
