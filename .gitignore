@@ -32,3 +32,6 @@ backups/init_rc_patched.rc
 /uboot_anti_tamper_research/
 /tools/
 issue1_share/
+
+# Personal room setup (widgets, Jarvis features): stays local, never published
+/personal/

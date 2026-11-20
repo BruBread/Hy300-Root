@@ -1,0 +1,51 @@
+@echo off
+setlocal
+rem Sleep mode: turns the projector's light off (and the fan stops) while Android and wifi stay up,
+rem so it wakes instantly. Your PC must be on the same wifi as the projector.
+rem Usage: sleep_mode.bat          toggle
+rem        sleep_mode.bat sleep    light off
+rem        sleep_mode.bat wake     light on
+rem The light is switched with the Lcd_en line. Do NOT use Lcd_power instead: it also cuts power to the
+rem LCD panel, which then comes back upside down until a full power cycle.
+
+set PROJ_IP=PROJECTOR_IP
+set PROJ_MAC=PROJECTOR_MAC
+set SUBNET=192.168.1
+set LINE=/sys/class/leds/Lcd_en/brightness
+
+adb connect %PROJ_IP%:5555 | find "connected to" >nul || call :find_projector
+adb -s %PROJ_IP%:5555 get-state >nul 2>&1 || (echo Projector not found. Is it on and on the same wifi? & goto :fail)
+set ADB=adb -s %PROJ_IP%:5555
+
+rem adb root restarts adbd after a reboot, which drops the wifi connection: reconnect.
+%ADB% root | find "restarting" >nul && (timeout /t 3 >nul & adb connect %PROJ_IP%:5555 >nul)
+
+set MODE=%1
+if "%MODE%"=="" (
+  for /f %%v in ('%ADB% shell cat %LINE%') do if "%%v"=="0" (set MODE=wake) else (set MODE=sleep)
+)
+
+if /i "%MODE%"=="sleep" (
+  %ADB% shell "input keyevent KEYCODE_SLEEP; sleep 1; echo 0 > %LINE%" || goto :fail
+  echo Projector asleep: light off, fan stops within a minute.
+  exit /b 0
+)
+if /i "%MODE%"=="wake" (
+  %ADB% shell "echo 255 > %LINE%; input keyevent KEYCODE_WAKEUP" || goto :fail
+  echo Projector awake.
+  exit /b 0
+)
+echo Usage: sleep_mode.bat [sleep^|wake]   no argument toggles
+goto :fail
+
+rem The projector's DHCP address changed: ping the subnet to fill the ARP table, then look it up by MAC.
+:find_projector
+for /L %%i in (1,1,254) do start /b "" ping -n 1 -w 300 %SUBNET%.%%i >nul
+timeout /t 3 >nul
+for /f "tokens=1" %%a in ('arp -a ^| find /i "%PROJ_MAC%"') do set PROJ_IP=%%a
+adb connect %PROJ_IP%:5555 >nul
+exit /b 0
+
+:fail
+pause
+exit /b 1
