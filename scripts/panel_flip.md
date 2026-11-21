@@ -50,3 +50,7 @@ Example from my unit: normal `lt=0,0 rt=-62,0 lb=16,107 rb=0,204` is stored as `
 ## Undo
 
 Delete the `on post-fs` panel block from `init.rk3326.rc` (backup: `/cust/init.rk3326.rc.pre-panelflip`), set the keystone props back to normal values (backup: `/cust/keystone_before_flip.txt`), and power-cycle.
+
+## Update: the boot restart isn't reliable, so the remote can flip the picture
+
+On 2026-11-22 the panel came up the wrong way even though the boot restart ran (`dmesg` showed the `exec` at about 10 s). Software can't tell which way the panel faces, so `scripts/bearwall_power.sh` now turns the picture 180° when POWER is **held 2 s or more**. It applies the corner transform above to the four keystone props, then forces a redraw. The transform is its own inverse, so holding again flips it back. Hold-to-shut-down is gone: a shutdown on this board left the LED lit and the remote dead.
