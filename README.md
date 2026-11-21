@@ -1,4 +1,4 @@
-# ProjectorRoot
+# HY300 Root
 
 I bought a cheap HY300 projector and wanted root on it. The firmware has developer options ripped out, so this repo is everything I tried to get in, what worked, and a lot of what didn't.
 
@@ -8,7 +8,38 @@ I got there in the end: persistent ADB and root in normal boot, over Wi-Fi, no c
 
 > Everything here was done on a projector I own, to learn and to make it do what I want. Read [Legal & scope](#legal--scope) before trying it on yours. None of this is a remote exploit. It all starts from having the device in your hands and using its own recovery.
 
-> **Security notice:** this projector came with what looks like residential-proxy malware. An app installed by the projector's own settings app was relaying other people's traffic through it, and there was a hidden root toolkit next to it. Evidence, indicators and how I removed it: [MALWARE_FINDINGS.md](MALWARE_FINDINGS.md). If you have an HY300 / TXCZ RK3326 unit, run [`scripts/check_malware.sh`](scripts/check_malware.sh). It only reads, it doesn't change anything.
+## Heads up: these projectors come with malware
+
+If you own an HY300 (or anything running TXCZ firmware), read this part even if you don't care about rooting.
+
+While rooting mine I found it was running **residential-proxy malware**. That means strangers were sending their internet traffic through my projector, so it left my house with my home IP. Whatever they do (scraping, ad fraud, worse) shows up as coming from you.
+
+What was on mine:
+
+- **`com.rockchip.itvbox`**, a fake "IPTV" app running as the system user. It kept connections open to random servers on port 9000 and other odd ports. That's the proxy.
+- **The projector's own settings app (`com.shzhtxcz.txbox`) installs it.** It keeps a list of apps it has to install, gets told what to push by its server, and put the proxy back about a minute after boot when I removed it. It also updates itself.
+- **A hidden root toolkit** in `/data/adb/prebuilt`, with a whole Alpine Linux system inside, and a packed ARM64 binary with boot hooks, locked so even root couldn't delete them.
+- **`daemon12138`**, a root program built into the firmware that runs on every boot. Its strings include MQTT, a downloader and headless Chrome. I think it drops the toolkit.
+- **A cast app hiding under a fake name.** QuickShare runs as a process called `com.huawei.connection` and phones home to an Alibaba Cloud server. There's nothing Huawei on this device.
+- The home screen and settings apps also talk to Alibaba and Tencent cloud servers.
+
+**Check yours.** With adb, this one command already tells you a lot:
+
+```sh
+adb shell pm list packages -i | grep -E "itvbox|installer=com.shzhtxcz"
+```
+
+Or run [`scripts/check_malware.sh`](scripts/check_malware.sh). It only reads, it doesn't change anything.
+
+**What doesn't fix it:**
+
+- **Disabling the app.** Mine updated itself and came back on.
+- **Uninstalling it.** The settings app reinstalls it.
+- **A factory reset.** `daemon12138` lives in `/system`, which resets to stock anyway.
+
+What worked for me: disable the settings app, uninstall the proxy app, delete the toolkit, block `daemon12138` at boot, firewall the proxy ports, and debloat everything else. The full evidence, hashes, every command and the debloat list are in **[MALWARE_FINDINGS.md](MALWARE_FINDINGS.md)**.
+
+The HY300 **Pro** has the same kind of thing with a different app: [micha102/hy300pro-debloat](https://github.com/micha102/hy300pro-debloat) found a proxy SDK (`com.hotack.silentsdk`) on it. If you can't root yours, the safest option is to keep it off Wi-Fi and use it as a plain HDMI screen.
 
 ## Quick facts
 
