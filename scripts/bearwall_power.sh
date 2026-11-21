@@ -10,20 +10,20 @@
 # sleep here: deep suspend crashes the RK628 HDMI-in driver (a wake lock at boot prevents it).
 LCD=/sys/class/leds/Lcd_en/brightness
 PWR=/sys/class/leds/Lcd_power/brightness
-timer=""
-getevent -q /dev/input/event0 | while read -r line; do
-  case "$line" in
-    *"0001 0074 00000001")   # POWER down: start the 3 s hold timer
-      (sleep 3; log -t bearwall_power "held 3 s: shutting down"; svc power shutdown) &
-      timer=$! ;;
-    *"0001 0074 00000000")   # POWER up before 3 s = short press
-      if [ -n "$timer" ] && kill "$timer" 2>/dev/null; then
-        if [ "$(cat $LCD)" = "0" ]; then
-          echo 255 > $PWR; sleep 0.5; echo 255 > $LCD; input keyevent KEYCODE_WAKEUP; log -t bearwall_power "wake"
-        else
-          echo 0 > $LCD; sleep 0.2; echo 0 > $PWR; log -t bearwall_power "sleep"
-        fi
-      fi
-      timer="" ;;
-  esac
+# The hold length comes from getevent's own timestamps (POWER = key 0x74, 1 = down, 0 = up), so there is
+# no background timer to kill. (A killed "(sleep 3; ...) &" timer took the whole script down with it.)
+# A hold of 3 s or more shuts down when the button is released.
+press_length() {
+  awk '{ t = $0; sub(/^\[ */, "", t); sub(/\].*/, "", t) }
+       / 0001 0074 00000001$/ { down = t }
+       / 0001 0074 00000000$/ { print (t - down >= 3) ? "long" : "short"; fflush() }'
+}
+getevent -t -q /dev/input/event0 | press_length | while read -r press; do
+  if [ "$press" = long ]; then
+    log -t bearwall_power "held 3 s: shutting down"; svc power shutdown
+  elif [ "$(cat $LCD)" = "0" ]; then
+    echo 255 > $PWR; sleep 0.5; echo 255 > $LCD; input keyevent KEYCODE_WAKEUP; log -t bearwall_power "wake"
+  else
+    echo 0 > $LCD; sleep 0.2; echo 0 > $PWR; log -t bearwall_power "sleep"
+  fi
 done
