@@ -12,7 +12,7 @@ I got there in the end: persistent ADB and root in normal boot, over Wi-Fi, no c
 
 If you own an HY300 (or anything running TXCZ firmware), read this part even if you don't care about rooting.
 
-While rooting mine I found it was running **residential-proxy malware**. That means strangers were sending their internet traffic through my projector, so it left my house with my home IP. Whatever they do (scraping, ad fraud, worse) shows up as coming from you.
+While rooting mine I found it was running **residential-proxy malware**.
 
 What was on mine:
 
