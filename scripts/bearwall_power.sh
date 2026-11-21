@@ -1,5 +1,7 @@
 #!/system/bin/sh
-# Remote POWER button: short press = sleep / wake, hold 3 s = shut down.
+# Remote POWER button: every press toggles sleep / wake. There is no hold-to-shut-down: on this board
+# `svc power shutdown` halts Android but leaves the LED lit (a bright rectangle, fan possibly stopped) and
+# nothing listens to the remote afterwards, so only unplugging recovers it. To turn it fully off, unplug it.
 # Install: /data/bearwall_power.sh, started at boot by /data/hdmi_autoswitch.sh (root).
 # Android's own POWER mapping is commented out in the remote's key layout,
 # so this is the only thing that reacts to the button. BearWall sees Lcd_en = 0 and pauses its page.
@@ -10,18 +12,12 @@
 # sleep here: deep suspend crashes the RK628 HDMI-in driver (a wake lock at boot prevents it).
 LCD=/sys/class/leds/Lcd_en/brightness
 PWR=/sys/class/leds/Lcd_power/brightness
-# The hold length comes from getevent's own timestamps (POWER = key 0x74, 1 = down, 0 = up), so there is
-# no background timer to kill. (A killed "(sleep 3; ...) &" timer took the whole script down with it.)
-# A hold of 3 s or more shuts down when the button is released.
-press_length() {
-  awk '{ t = $0; sub(/^\[ */, "", t); sub(/\].*/, "", t) }
-       / 0001 0074 00000001$/ { down = t }
-       / 0001 0074 00000000$/ { print (t - down >= 3) ? "long" : "short"; fflush() }'
+# One line per release of POWER (key 0x74, 0 = up), however long it was held.
+presses() {
+  awk '/ 0001 0074 00000000$/ { print "press"; fflush() }'
 }
-getevent -t -q /dev/input/event0 | press_length | while read -r press; do
-  if [ "$press" = long ]; then
-    log -t bearwall_power "held 3 s: shutting down"; svc power shutdown
-  elif [ "$(cat $LCD)" = "0" ]; then
+getevent -q /dev/input/event0 | presses | while read -r press; do
+  if [ "$(cat $LCD)" = "0" ]; then
     echo 255 > $PWR; sleep 0.5; echo 255 > $LCD; input keyevent KEYCODE_WAKEUP; log -t bearwall_power "wake"
   else
     echo 0 > $LCD; sleep 0.2; echo 0 > $PWR; log -t bearwall_power "sleep"
