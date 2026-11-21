@@ -5,13 +5,17 @@ rem so it wakes instantly. Your PC must be on the same wifi as the projector.
 rem Usage: sleep_mode.bat          toggle
 rem        sleep_mode.bat sleep    light off
 rem        sleep_mode.bat wake     light on
-rem The light is switched with the Lcd_en line. Do NOT use Lcd_power instead: it also cuts power to the
-rem LCD panel, which then comes back upside down until a full power cycle.
+rem Same sequence as the remote's power button (scripts/bearwall_power.sh): Lcd_en off then Lcd_power off,
+rem and back on in reverse with a 0.5 s gap. Only Lcd_power turns the LED off. A panel power cycle leaves
+rem the panel upside down, which is why the vendor init file restarts it at boot and the keystone corners
+rem are stored rotated 180 degrees (scripts/panel_flip.md). Android is never put to sleep: deep suspend
+rem crashes the RK628 HDMI-in driver.
 
 set PROJ_IP=PROJECTOR_IP
 set PROJ_MAC=PROJECTOR_MAC
 set SUBNET=192.168.1
 set LINE=/sys/class/leds/Lcd_en/brightness
+set PWR=/sys/class/leds/Lcd_power/brightness
 
 adb connect %PROJ_IP%:5555 | find "connected to" >nul || call :find_projector
 adb -s %PROJ_IP%:5555 get-state >nul 2>&1 || (echo Projector not found. Is it on and on the same wifi? & goto :fail)
@@ -26,12 +30,12 @@ if "%MODE%"=="" (
 )
 
 if /i "%MODE%"=="sleep" (
-  %ADB% shell "input keyevent KEYCODE_SLEEP; sleep 1; echo 0 > %LINE%" || goto :fail
+  %ADB% shell "echo 0 > %LINE%; sleep 0.2; echo 0 > %PWR%" || goto :fail
   echo Projector asleep: light off, fan stops within a minute.
   exit /b 0
 )
 if /i "%MODE%"=="wake" (
-  %ADB% shell "echo 255 > %LINE%; input keyevent KEYCODE_WAKEUP" || goto :fail
+  %ADB% shell "echo 255 > %PWR%; sleep 0.5; echo 255 > %LINE%; input keyevent KEYCODE_WAKEUP" || goto :fail
   echo Projector awake.
   exit /b 0
 )

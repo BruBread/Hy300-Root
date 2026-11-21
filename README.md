@@ -71,7 +71,7 @@ None of that needs `/system` to be writable. It all lives in `/data`, so persist
 Once root worked, I kept going:
 
 - **Projection mapping.** A browser page that warps the picture live by dragging the 4 corners, plus shape masks so only a circle or polygon is lit. It runs off the projector's own keystone. See [`keystone/`](keystone/).
-- **Sleep mode.** Turns the light and fan off without shutting the projector down, so it wakes instantly ([`scripts/sleep_mode.bat`](scripts/sleep_mode.bat)). Found the right control line by testing them one by one. The wrong one powered off the LCD panel, and it came back upside down.
+- **Sleep mode.** Turns the light and fan off without shutting the projector down, so it wakes instantly ([`scripts/sleep_mode.bat`](scripts/sleep_mode.bat)). Only the line that cuts the LCD panel's power actually turns the LED off, and the panel comes back upside down after that. So the projector now restarts the panel once at boot and stores the keystone corners rotated 180° to match ([`scripts/panel_flip.md`](scripts/panel_flip.md)).
 - **Custom boot screen.** My own static logo and a CRT-style boot animation ([`scripts/make_static_logo.py`](scripts/make_static_logo.py), [`scripts/make_crt_bootanim.py`](scripts/make_crt_bootanim.py)).
 - **PC streaming.** One click streams my desktop to the projector with Sunshine and Moonlight ([`scripts/cast_to_projector.bat`](scripts/cast_to_projector.bat)).
 - **HDMI auto-switch and brightness control** ([`scripts/hdmi_autoswitch.sh`](scripts/hdmi_autoswitch.sh), [`scripts/brightness.bat`](scripts/brightness.bat)).
