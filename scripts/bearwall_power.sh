@@ -16,6 +16,7 @@
 # Never put Android to sleep here: deep suspend crashes the RK628 HDMI-in driver (a wake lock at boot prevents it).
 LCD=/sys/class/leds/Lcd_en/brightness
 PWR=/sys/class/leds/Lcd_power/brightness
+FRONT=/data/data/com.bearwall/files/front   # "1" while BearWall's wall is on screen (WallActivity writes it)
 
 flip_picture() {
   for c in lt rt lb rb; do
@@ -46,6 +47,12 @@ getevent -t -q /dev/input/event0 | press_length | while read -r press; do
   elif [ "$(cat $LCD)" = "0" ]; then
     echo 255 > $PWR; sleep 0.5; echo 255 > $LCD; input keyevent KEYCODE_WAKEUP; log -t bearwall_power "wake"
   else
+    # BearWall on screen: let it play its power-down animation (the intro in reverse) before the panel goes dark.
+    # Anything else (HDMI-in, Moonlight): dark at once.
+    if [ "$(cat $FRONT 2>/dev/null)" = "1" ]; then
+      am broadcast -a com.bearwall.POWERDOWN >/dev/null 2>&1 &
+      sleep 2.5
+    fi
     echo 0 > $LCD; sleep 0.2; echo 0 > $PWR; log -t bearwall_power "sleep"
   fi
 done
