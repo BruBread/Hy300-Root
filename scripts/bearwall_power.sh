@@ -41,6 +41,7 @@ press_length() {
 }
 getevent -t -q /dev/input/event0 | press_length | while read -r press; do
   if [ "$press" = long ]; then
+    am broadcast -a com.bearwall.SOUND --es id flip >/dev/null 2>&1 &   # BearWall plays the flip whoosh
     flip_picture; log -t bearwall_power "held: picture turned 180 degrees"
   elif [ "$(cat $LCD)" = "0" ]; then
     echo 255 > $PWR; sleep 0.5; echo 255 > $LCD; input keyevent KEYCODE_WAKEUP; log -t bearwall_power "wake"
