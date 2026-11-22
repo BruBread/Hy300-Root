@@ -50,7 +50,7 @@ getevent -t -q /dev/input/event0 | press_length | while read -r press; do
     # BearWall on screen: let it play its power-down animation (the intro in reverse) before the panel goes dark.
     # Anything else (HDMI-in, Moonlight): dark at once.
     if [ "$(cat $FRONT 2>/dev/null)" = "1" ]; then
-      am broadcast -a com.bearwall.POWERDOWN >/dev/null 2>&1 &
+      echo 1 > /data/data/com.bearwall/files/powerdown   # BearWall watches for this file (inotify): instant, no extra process
       sleep 2.5
     fi
     echo 0 > $LCD; sleep 0.2; echo 0 > $PWR; log -t bearwall_power "sleep"
